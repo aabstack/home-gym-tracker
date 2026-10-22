@@ -12,6 +12,7 @@ An offline-first **Progressive Web App** for logging a fixed 3-day full-body hyp
 - Prefill from last session, a "Last time" line, and progression suggestions (double progression plus the program's ladder)
 - Rest timer based on an end timestamp, so it survives screen-off and app restarts. Vibrates, beeps (optional) and sends a notification when the app is in the background
 - Supersets (Day C) alternate A1, B1, A2, B2…; swap exercises within the same movement pattern
+- Exercise guide with an animated stick-figure demo of every exercise, timed to its tempo (works offline), plus a **Watch demo** button that opens a YouTube search when online
 - Session summary with PRs and a beat / matched / fell-short comparison
 - History list, calendar, and session edit; progress charts (top set, e1RM, reps, volume, bodyweight, weekly sets per muscle)
 - JSON backup and restore (merge or replace), CSV export, delete all data
@@ -43,8 +44,10 @@ The service worker is only registered in production builds (`npm run build && np
 src/
   data/        program.seed.json (verbatim from PROGRAM.md), db.ts (Dexie schema), seed.ts,
                repo.ts (queries), settings.ts, backup.ts (JSON/CSV), demo.ts (dev only)
-  domain/      pure, unit-tested logic: rotation, progression, deload, stats, session, format
-  features/    today/, warmup/, session/, exercise/, history/, progress/, settings/
+  domain/      pure, unit-tested logic: rotation, progression, deload, stats, session, format,
+               figure (stick-figure animation engine: inverse kinematics + tempo timeline)
+  features/    today/, warmup/, session/, exercise/ (guide + demos.ts pose data), history/,
+               progress/, settings/
   components/  shared UI (Button, Stepper, Sheet, Card, Segmented, Toggle, …)
   hooks/       useWakeLock, useNow, vibration/sound/notifications
   pwa/         service worker registration + update toast event

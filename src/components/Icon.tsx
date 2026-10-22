@@ -20,6 +20,9 @@ const PATHS = {
   timer: 'M12 21a8 8 0 100-16 8 8 0 000 16zM12 9v4l2 2M9 2h6',
   up: 'M12 19V5M5 12l7-7 7 7',
   trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4',
+  play: 'M8 5l11 7-11 7z',
+  pause: 'M9 5v14M15 5v14',
+  external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
   bell: 'M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0',
 } as const;
 
