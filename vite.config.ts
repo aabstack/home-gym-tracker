@@ -8,8 +8,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 // A relative base also works because routing uses the URL hash.
 const base = process.env.BASE_PATH ?? './';
 
+const buildTime = new Date().toISOString();
+const commit = (process.env.GITHUB_SHA ?? 'local').slice(0, 7);
+
 export default defineConfig({
   base,
+  define: {
+    __APP_BUILD__: JSON.stringify(buildTime),
+    __APP_COMMIT__: JSON.stringify(commit),
+  },
   plugins: [
     react(),
     tailwindcss(),

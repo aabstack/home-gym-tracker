@@ -24,6 +24,7 @@ import { programSeed } from '../../data/seed';
 import { DEFAULT_SETTINGS, setSetting, useSettings } from '../../data/settings';
 import { mondayOf, resolveProgramStart, weekNumber } from '../../domain/deload';
 import { formatKg, roundKg } from '../../domain/format';
+import { checkForUpdate } from '../../pwa/register';
 import { downloadText } from './download';
 
 export function SettingsScreen() {
@@ -291,6 +292,8 @@ export function SettingsScreen() {
           </Button>
         </Section>
 
+        <AppVersion />
+
         {import.meta.env.DEV && <DevTools />}
 
         <p className="pb-4 text-center text-label text-muted">
@@ -370,5 +373,35 @@ function Section({
       </h2>
       {children}
     </Card>
+  );
+}
+
+function AppVersion() {
+  const ui = useUi();
+  const [checking, setChecking] = useState(false);
+  const built = new Date(__APP_BUILD__);
+  const check = async () => {
+    setChecking(true);
+    const result = await checkForUpdate();
+    setChecking(false);
+    if (result === 'reloading') return;
+    ui.snackbar({
+      message:
+        result === 'latest'
+          ? "You're on the latest version"
+          : result === 'offline'
+            ? 'You are offline. Connect to check for updates.'
+            : 'Updates are checked automatically in the installed app.',
+    });
+  };
+  return (
+    <Section title="App version">
+      <p className="num text-label text-muted">
+        Built {format(built, 'd MMM yyyy, HH:mm')} · {__APP_COMMIT__}
+      </p>
+      <Button block className="mt-2" disabled={checking} onClick={() => void check()}>
+        {checking ? 'Checking…' : 'Check for updates'}
+      </Button>
+    </Section>
   );
 }

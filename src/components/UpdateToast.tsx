@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { UPDATE_EVENT } from '../pwa/register';
+import { isUpdateReady, UPDATE_EVENT } from '../pwa/register';
 
 export function UpdateToast() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(isUpdateReady);
   useEffect(() => {
     const on = () => setReady(true);
     window.addEventListener(UPDATE_EVENT, on);

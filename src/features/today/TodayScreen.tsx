@@ -8,7 +8,13 @@ import { DayBadge } from '../../components/DayBadge';
 import { Icon } from '../../components/Icon';
 import { PageHeader } from '../../components/PageHeader';
 import { Sheet } from '../../components/Sheet';
-import { startSession, useExercises, useProgramDays, useSessions } from '../../data/repo';
+import {
+  startSession,
+  useExercises,
+  useHistories,
+  useProgramDays,
+  useSessions,
+} from '../../data/repo';
 import { programSeed } from '../../data/seed';
 import { setSetting, useSettings } from '../../data/settings';
 import type { DayId } from '../../data/types';
@@ -17,6 +23,9 @@ import { nextDayId, shouldRest } from '../../domain/rotation';
 import { estimateMinutes } from '../../domain/session';
 import { sessionsThisWeek, weekStreak } from '../../domain/stats';
 import { requestNotificationPermission } from '../../hooks/useVibrate';
+import { ExerciseGuideSheet } from '../exercise/ExerciseGuideSheet';
+
+const ALL_EXERCISE_IDS = programSeed.exercises.map((e) => e.id);
 
 export function TodayScreen() {
   const navigate = useNavigate();
@@ -26,6 +35,8 @@ export function TodayScreen() {
   const settings = useSettings();
   const [chooseOpen, setChooseOpen] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [guideId, setGuideId] = useState<string | null>(null);
+  const histories = useHistories(ALL_EXERCISE_IDS);
 
   if (!sessions || !days || !exercises) return null;
 
@@ -48,6 +59,8 @@ export function TodayScreen() {
       perSide: exercises.get(it.exerciseId)?.perSide ?? false,
     })),
   );
+
+  const guideItem = guideId ? day.items.find((it) => it.exerciseId === guideId) : undefined;
 
   const begin = async (dayId: DayId) => {
     if (starting) return;
@@ -101,22 +114,32 @@ export function TodayScreen() {
           <p className="mt-1 flex items-center gap-1 text-label text-muted">
             <Icon name="timer" size={16} /> About {minutes} min
           </p>
-          <ol className="mt-3 divide-y divide-line">
+          <p className="mt-3 flex items-center gap-1 text-label text-muted">
+            <Icon name="info" size={16} /> Tap an exercise for the how-to and animated demo
+          </p>
+          <ol className="mt-1 divide-y divide-line">
             {day.items.map((it) => {
               const ex = exercises.get(it.exerciseId);
               const sets = prescribedSets(it.sets, deload);
               const reps = it.repMin === it.repMax ? it.repMax : `${it.repMin}–${it.repMax}`;
               return (
-                <li key={it.exerciseId} className="flex justify-between gap-3 py-2">
-                  <span className="min-w-0">
-                    {ex?.name ?? it.exerciseId}
-                    {it.supersetGroup && (
-                      <span className="ml-1 text-label text-muted">(superset)</span>
-                    )}
-                  </span>
-                  <span className="num shrink-0 text-muted">
-                    {sets}×{reps}
-                  </span>
+                <li key={it.exerciseId}>
+                  <button
+                    type="button"
+                    onClick={() => setGuideId(it.exerciseId)}
+                    className="flex min-h-12 w-full items-center justify-between gap-3 py-2 text-left"
+                  >
+                    <span className="min-w-0">
+                      {ex?.name ?? it.exerciseId}
+                      {it.supersetGroup && (
+                        <span className="ml-1 text-label text-muted">(superset)</span>
+                      )}
+                    </span>
+                    <span className="num flex shrink-0 items-center gap-1 text-muted">
+                      {sets}×{reps}
+                      <Icon name="forward" size={16} />
+                    </span>
+                  </button>
                 </li>
               );
             })}
@@ -146,6 +169,13 @@ export function TodayScreen() {
           </>
         )}
       </div>
+
+      <ExerciseGuideSheet
+        exercise={guideId ? (exercises.get(guideId) ?? null) : null}
+        item={guideItem && { ...guideItem, sets: prescribedSets(guideItem.sets, deload) }}
+        history={guideId ? histories?.get(guideId) : undefined}
+        onClose={() => setGuideId(null)}
+      />
 
       <Sheet open={chooseOpen} onClose={() => setChooseOpen(false)} title="Choose a day">
         <div className="flex flex-col gap-2">
