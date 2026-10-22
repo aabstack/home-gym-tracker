@@ -44,6 +44,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+        // Activate new versions right away. The plugin only sets these itself when it injects
+        // its own registration (injectRegister: 'auto'); we register manually to show a toast.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],

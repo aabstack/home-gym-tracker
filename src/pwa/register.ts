@@ -33,6 +33,8 @@ export function registerPwa() {
     onRegisteredSW(_url, reg) {
       if (!reg) return;
       registration = reg;
+      // A version left waiting by an older build (before skipWaiting was on): activate it.
+      reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
       const check = () => {
         if (navigator.onLine) void reg.update().catch(() => {});
       };
@@ -63,11 +65,13 @@ export async function checkForUpdate(): Promise<UpdateResult> {
   }
   const sw = reg.installing ?? reg.waiting;
   if (!sw) return 'latest';
+  if (sw === reg.waiting) sw.postMessage({ type: 'SKIP_WAITING' });
   await new Promise<void>((resolve) => {
     if (sw.state === 'activated') return resolve();
     sw.addEventListener('statechange', () => {
       if (sw.state === 'activated' || sw.state === 'redundant') resolve();
     });
+    setTimeout(resolve, 15_000);
   });
   window.location.reload();
   return 'reloading';
