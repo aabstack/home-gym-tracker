@@ -2,7 +2,7 @@
 
 An offline-first **Progressive Web App** for logging a fixed 3-day full-body hypertrophy program (A → B → C) on a Samsung Galaxy S23. No backend and no accounts: all data stays in IndexedDB on the phone.
 
-**Live URL:** _not deployed yet._ After the first GitHub Pages deploy it will be `https://<your-github-user>.github.io/<repo-name>/`. Put the real link here.
+**Live app:** https://aabstack.github.io/home-gym-tracker/ (source: https://github.com/aabstack/home-gym-tracker)
 
 ## Features
 

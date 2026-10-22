@@ -65,4 +65,4 @@ Work through the phases in order. After each phase run `npm run lint && npm test
 - [x] Empty states (no history yet, no chart data)
 - [x] Font scaling to 130% doesn't break layouts
 - [x] Remove the demo data button from the production build
-- [ ] Update `README.md` with the final URL and any setup notes _(setup notes done; add the URL after the first Pages deploy)_
+- [x] Update `README.md` with the final URL and any setup notes
