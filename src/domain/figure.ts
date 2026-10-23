@@ -26,6 +26,11 @@ export interface Pose {
   /** Toe direction from the ankle (default 0 = pointing forward). */
   toeN?: number;
   toeF?: number;
+  /**
+   * Arm length factor (default 1). Below 1 draws arms foreshortened, i.e. pointing towards or
+   * away from the viewer (front-view pull-aparts, shoulder-blade-only movements).
+   */
+  armScale?: number;
 }
 
 export type Bend = 1 | -1;
@@ -175,6 +180,7 @@ export function lerpPose(a: Pose, b: Pose, t: number): Pose {
     ),
     toeN: lerpAngle(a.toeN ?? 0, b.toeN ?? 0, t),
     toeF: lerpAngle(a.toeF ?? a.toeN ?? 0, b.toeF ?? b.toeN ?? 0, t),
+    armScale: lerp(a.armScale ?? 1, b.armScale ?? 1, t),
   };
 }
 
@@ -184,8 +190,15 @@ export function buildSkeleton(pose: Pose, bends: Bends = DEFAULT_BENDS): Skeleto
   const shoulder = shoulderOf(pose);
   const neck = add(hip, dir(pose.torso, BONES.torso + BONES.neck));
   const head = add(neck, dir(pose.head ?? pose.torso, BONES.head - BONES.neck));
+  const k = pose.armScale ?? 1;
   const arm = (t: Target, bend: Bend) =>
-    solveLimb(shoulder, resolveTarget(t, hip, shoulder), BONES.upperArm, BONES.forearm, bend);
+    solveLimb(
+      shoulder,
+      resolveTarget(t, hip, shoulder),
+      BONES.upperArm * k,
+      BONES.forearm * k,
+      bend,
+    );
   const leg = (t: Target, bend: Bend) =>
     solveLimb(hip, resolveTarget(t, hip, shoulder), BONES.thigh, BONES.shin, bend);
 

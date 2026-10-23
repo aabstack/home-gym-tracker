@@ -22,10 +22,14 @@ export type Prop =
   /** A dumbbell held in a hand or resting on the hips. `angle` 0 = horizontal. */
   | { kind: 'dumbbell'; at: 'handN' | 'handF' | 'hip'; d?: Vec; angle?: number }
   /** The yellow resistance band from a fixed anchor to the hand(s). */
-  | { kind: 'band'; from: Vec; to: 'handN' | 'hands' };
+  | { kind: 'band'; from: Vec; to: 'handN' | 'hands' }
+  /** The band held between both hands (pass-throughs, pull-aparts). */
+  | { kind: 'bandBetween' };
 
 export interface Demo {
   viewBox: string;
+  /** 'front' draws both sides of the body at full strength (default 'side'). */
+  view?: 'side' | 'front';
   props: Prop[];
   poses: Record<string, Pose>;
   /** Poses visited during the eccentric phase (reversed for the concentric). */
@@ -723,7 +727,249 @@ export function programTempo(exerciseId: string): string {
 }
 
 /** YouTube search for a form demo; opens outside the app (needs internet). */
-export function demoSearchUrl(exerciseName: string): string {
-  const q = `${exerciseName.replace(/\(.*?\)/g, '').trim()} exercise proper form`;
+export function demoSearchUrl(exerciseName: string, suffix = 'exercise proper form'): string {
+  const q = `${exerciseName.replace(/\(.*?\)/g, '').trim()} ${suffix}`;
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
 }
+
+// ---- Warm-up ----
+
+export interface WarmupDemo {
+  /** Caption when an item has more than one movement (squat + bridge). */
+  title?: string;
+  demo: Demo;
+}
+
+const standingBase = {
+  hip: [60, 55] as Vec,
+  torso: -90,
+  footN: [63, 92] as Vec,
+  footF: [57, 92] as Vec,
+};
+
+/** Straight-arm poses every ~45° around the shoulder, for smooth arm circles. */
+function armArc(angles: number[], scale = 26.5): Record<string, Pose> {
+  const poses: Record<string, Pose> = {};
+  angles.forEach((deg, i) => {
+    const r = (deg * Math.PI) / 180;
+    const d: Vec = [Math.cos(r) * scale, Math.sin(r) * scale];
+    poses[i === 0 ? 'start' : `p${i}`] = {
+      ...standingBase,
+      handN: sh(d[0], d[1]),
+      handF: sh(d[0] - 1.5, d[1]),
+    };
+  });
+  return poses;
+}
+
+// Front of the thighs → up and over the head → behind the hips (decreasing angle = over the top).
+const PASS_ANGLES = [80, 40, 0, -40, -80, -120, -160, 160, 115];
+const passThrough = armArc(PASS_ANGLES);
+const passKeys = Object.keys(passThrough);
+
+const hangFrame = hang(['', '']);
+
+export const WARMUP_DEMOS: Record<string, WarmupDemo[]> = {
+  wu_pass_through: [
+    {
+      demo: {
+        viewBox: VIEWBOX,
+        props: [FLOOR, { kind: 'bandBetween' }],
+        poses: passThrough,
+        labels: ['Over the head', 'Back to the front'],
+        custom: [
+          ...passKeys
+            .slice(1)
+            .map((k) => ({ to: k, sec: 0.3, label: 'Over the head, arms straight' })),
+          { to: passKeys[passKeys.length - 1], sec: 0.4, label: 'Behind the hips' },
+          ...passKeys
+            .slice(0, -1)
+            .reverse()
+            .map((k) => ({ to: k, sec: 0.3, label: 'Back to the front' })),
+          { to: 'start', sec: 0.4, label: 'Start' },
+        ],
+      },
+    },
+  ],
+
+  wu_pull_apart: [
+    {
+      demo: {
+        viewBox: VIEWBOX,
+        view: 'front',
+        props: [FLOOR, { kind: 'bandBetween' }],
+        poses: {
+          // Arms straight out in front (pointing at you), then pulled out wide.
+          start: {
+            ...standingBase,
+            footN: [66, 92],
+            footF: [54, 92],
+            handN: sh(5.2, 1),
+            handF: sh(-5.2, 1),
+            armScale: 0.2,
+          },
+          end: {
+            ...standingBase,
+            footN: [66, 92],
+            footF: [54, 92],
+            handN: sh(26.5, 0),
+            handF: sh(-26.5, 0),
+          },
+        },
+        bends: { kneeF: 1 },
+        labels: ['Pull apart, squeeze shoulder blades', 'Return slowly'],
+        custom: [
+          { to: 'end', sec: 1, label: 'Pull apart, arms straight' },
+          { to: 'end', sec: 0.8, label: 'Squeeze shoulder blades' },
+          { to: 'start', sec: 1.2, label: 'Return slowly' },
+        ],
+      },
+    },
+  ],
+
+  wu_scap_pullup: [
+    {
+      demo: {
+        ...hangFrame,
+        poses: {
+          // Shoulder blades pulled down: body rises a little, arms stay straight.
+          start: {
+            hip: [60, 52],
+            torso: -90,
+            handN: [60, 4],
+            handF: [62, 4],
+            armScale: 0.86,
+            footN: hp(-12, 26),
+            footF: hp(-14, 25),
+            toeN: 100,
+          },
+          end: {
+            hip: [60, 56],
+            torso: -90,
+            handN: [60, 4],
+            handF: [62, 4],
+            footN: hp(-12, 26),
+            footF: hp(-14, 25),
+            toeN: 100,
+          },
+        },
+        labels: ['Relax', 'Shoulder blades down'],
+        custom: [
+          { to: 'end', sec: 1, label: 'Relax into a dead hang' },
+          { to: 'end', sec: 0.5, label: 'Arms stay straight' },
+          { to: 'start', sec: 1, label: 'Pull shoulder blades down' },
+          { to: 'start', sec: 0.8, label: 'Hold' },
+        ],
+      },
+    },
+  ],
+
+  wu_wgs: [
+    {
+      demo: {
+        viewBox: VIEWBOX,
+        props: [FLOOR],
+        poses: {
+          start: {
+            hip: [52, 72],
+            torso: -8,
+            handN: [84, 91],
+            handF: [80, 91],
+            footN: [80, 92],
+            footF: [18, 90],
+            toeF: 90,
+          },
+          elbow: {
+            hip: [52, 74],
+            torso: 4,
+            handN: [86, 91],
+            handF: [82, 91],
+            footN: [80, 92],
+            footF: [18, 90],
+            toeF: 90,
+          },
+          open: {
+            hip: [52, 72],
+            torso: -15,
+            head: -75,
+            handN: sh(1, -27),
+            handF: [80, 91],
+            footN: [80, 92],
+            footF: [18, 90],
+            toeF: 90,
+          },
+        },
+        bends: { elbowN: -1, elbowF: -1 },
+        labels: ['Stretch', 'Return'],
+        custom: [
+          { to: 'elbow', sec: 1.4, label: 'Elbow to instep' },
+          { to: 'elbow', sec: 1, label: 'Hold the stretch' },
+          { to: 'start', sec: 1, label: 'Hands down' },
+          { to: 'open', sec: 1.4, label: 'Rotate open, reach up' },
+          { to: 'open', sec: 1.2, label: 'Look at your hand' },
+          { to: 'start', sec: 1, label: 'Back to the lunge' },
+        ],
+      },
+    },
+  ],
+
+  wu_squat_bridge: [
+    {
+      title: 'Bodyweight squat',
+      demo: {
+        viewBox: VIEWBOX,
+        props: [FLOOR],
+        poses: {
+          start: { ...standingBase, handN: sh(4, 25), handF: sh(2, 25) },
+          end: {
+            hip: [52, 75],
+            torso: -58,
+            handN: sh(25, 1),
+            handF: sh(24, 2),
+            footN: [63, 92],
+            footF: [60, 92],
+          },
+        },
+        labels: ['Sit down', 'Stand up'],
+        custom: [
+          { to: 'end', sec: 1.5, label: 'Sit down, full range' },
+          { to: 'end', sec: 0.5, label: 'Bottom' },
+          { to: 'start', sec: 1.2, label: 'Stand up' },
+        ],
+      },
+    },
+    {
+      title: 'Glute bridge',
+      demo: {
+        viewBox: VIEWBOX,
+        props: [FLOOR],
+        poses: {
+          start: {
+            hip: [55, 86],
+            torso: 180,
+            head: 180,
+            handN: [46, 91],
+            handF: [44, 91],
+            footN: [72, 92],
+            footF: [70, 92],
+          },
+          end: {
+            hip: [54, 74],
+            torso: 153.4,
+            head: 175,
+            handN: [46, 91],
+            handF: [44, 91],
+            footN: [72, 92],
+            footF: [70, 92],
+          },
+        },
+        labels: ['Lift hips', 'Lower'],
+        custom: [
+          { to: 'end', sec: 1.2, label: 'Squeeze glutes, lift hips' },
+          { to: 'end', sec: 0.8, label: 'Hold' },
+          { to: 'start', sec: 1.2, label: 'Lower with control' },
+        ],
+      },
+    },
+  ],
+};

@@ -8,6 +8,7 @@ import {
   type Skeleton,
   type Vec,
 } from '../../domain/figure';
+import type { Step } from '../../domain/figure';
 import { bendsFor, DEMOS, timelineFor, type Demo, type Prop } from './demos';
 
 function prefersReducedMotion() {
@@ -30,6 +31,20 @@ export function ExerciseAnimation({
 }) {
   const demo = DEMOS[exerciseId];
   const steps = useMemo(() => (demo ? timelineFor(demo, tempo) : []), [demo, tempo]);
+  if (!demo) return null;
+  return <AnimationPlayer demo={demo} steps={steps} name={name} />;
+}
+
+/** Plays any demo along a timeline. */
+export function AnimationPlayer({
+  demo,
+  steps,
+  name,
+}: {
+  demo: Demo;
+  steps: Step[];
+  name: string;
+}) {
   const [playing, setPlaying] = useState(() => !prefersReducedMotion());
   const [t, setT] = useState(0);
   const tRef = useRef(0);
@@ -49,7 +64,7 @@ export function ExerciseAnimation({
     return () => cancelAnimationFrame(raf);
   }, [playing, steps]);
 
-  if (!demo || steps.length === 0) return null;
+  if (steps.length === 0) return null;
 
   const s = sampleTimeline(steps, t);
   const pose = lerpPose(demo.poses[s.step.from], demo.poses[s.step.to], s.alpha);
@@ -104,6 +119,9 @@ function Figure({ demo, sk }: { demo: Demo; sk: Skeleton }) {
     (p): p is Extract<Prop, { kind: 'dumbbell' }> => p.kind === 'dumbbell',
   );
   const bands = demo.props.filter((p): p is Extract<Prop, { kind: 'band' }> => p.kind === 'band');
+  const bandBetween = demo.props.some((p) => p.kind === 'bandBetween');
+  // Front view: both sides are equally visible; side view: far limbs are muted, behind the body.
+  const front = demo.view === 'front';
 
   return (
     <g>
@@ -118,7 +136,7 @@ function Figure({ demo, sk }: { demo: Demo; sk: Skeleton }) {
         />
       ))}
       {/* Far side limbs, drawn behind the body */}
-      <g {...LIMB} stroke="var(--muted)" strokeWidth={3.2}>
+      <g {...LIMB} stroke={front ? 'var(--text)' : 'var(--muted)'} strokeWidth={front ? 3.6 : 3.2}>
         <polyline points={pts([sk.hip, sk.kneeF, sk.ankleF, sk.toeF])} />
         <polyline points={pts([sk.shoulder, sk.elbowF, sk.handF])} />
       </g>
@@ -149,6 +167,19 @@ function Figure({ demo, sk }: { demo: Demo; sk: Skeleton }) {
         .map((b, i) => (
           <Dumbbell key={`n${i}`} at={sk.handN} angle={b.angle ?? 0} />
         ))}
+      {bandBetween && (
+        <g stroke="var(--warn)" strokeLinecap="round" fill="var(--warn)">
+          <line
+            x1={sk.handF[0]}
+            y1={sk.handF[1]}
+            x2={sk.handN[0]}
+            y2={sk.handN[1]}
+            strokeWidth={1.6}
+          />
+          <circle cx={sk.handN[0]} cy={sk.handN[1]} r={1.7} />
+          <circle cx={sk.handF[0]} cy={sk.handF[1]} r={1.7} />
+        </g>
+      )}
       {bands.map((b, i) => (
         <g key={i} stroke="var(--warn)" strokeWidth={1.4} strokeLinecap="round">
           {b.to === 'hands' && (

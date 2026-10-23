@@ -86,6 +86,13 @@ describe('figure engine', () => {
     expect(lerpAngle(10, 30, 0.5)).toBeCloseTo(20);
   });
 
+  it('armScale shortens arms proportionally and blends', () => {
+    const sk = buildSkeleton({ ...standing, armScale: 0.5 });
+    close(dist(sk.shoulder, sk.elbowN), BONES.upperArm * 0.5);
+    close(dist(sk.elbowN, sk.handN), BONES.forearm * 0.5);
+    expect(lerpPose({ ...standing, armScale: 0.2 }, standing, 0.5).armScale).toBeCloseTo(0.6);
+  });
+
   it('lerpPose returns the endpoints exactly', () => {
     expect(lerpPose(standing, squat, 0)).toBe(standing);
     expect(lerpPose(standing, squat, 1)).toBe(squat);

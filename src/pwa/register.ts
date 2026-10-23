@@ -28,6 +28,16 @@ function markReady() {
  */
 export function registerPwa() {
   if (import.meta.env.DEV) return;
+  const hadController = !!navigator.serviceWorker?.controller;
+  // Answer the new service worker (public/sw-update.js) so it knows this window runs a current
+  // build and shows the toast, instead of being reloaded mid-set.
+  navigator.serviceWorker?.addEventListener('message', (event) => {
+    if ((event.data as { type?: string } | null)?.type !== 'GYM_SW_ACTIVATED') return;
+    (event.source as ServiceWorker | null)?.postMessage({ type: 'GYM_ACK' });
+    // On a first install there was no previous version, so there is nothing to reload into.
+    if (hadController) markReady();
+  });
+  navigator.serviceWorker?.startMessages();
   registerSW({
     immediate: true,
     onRegisteredSW(_url, reg) {

@@ -42,12 +42,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globIgnores: ['sw-update.js'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         // Activate new versions right away. The plugin only sets these itself when it injects
         // its own registration (injectRegister: 'auto'); we register manually to show a toast.
         skipWaiting: true,
         clientsClaim: true,
+        // Reloads windows still running an old build after an update (see the file).
+        importScripts: ['sw-update.js'],
       },
     }),
   ],

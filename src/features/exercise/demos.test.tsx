@@ -8,7 +8,15 @@ import {
   shoulderOf,
   timelineLength,
 } from '../../domain/figure';
-import { bendsFor, demoSearchUrl, DEMOS, programTempo, timelineFor } from './demos';
+import {
+  bendsFor,
+  demoSearchUrl,
+  DEMOS,
+  programTempo,
+  timelineFor,
+  WARMUP_DEMOS,
+  type Demo,
+} from './demos';
 import { ExerciseAnimation } from './ExerciseAnimation';
 
 const ARM = BONES.upperArm + BONES.forearm;
@@ -16,30 +24,49 @@ const LEG = BONES.thigh + BONES.shin;
 /** How far a hand/foot target may sit beyond reach (the IK then straightens the limb). */
 const SLACK = 1.5;
 
+function checkDemo(id: string, demo: Demo, tempo: string) {
+  const steps = timelineFor(demo, tempo);
+  expect(timelineLength(steps)).toBeGreaterThan(1);
+  for (const s of steps) {
+    expect(demo.poses[s.from], `${id} pose ${s.from}`).toBeDefined();
+    expect(demo.poses[s.to], `${id} pose ${s.to}`).toBeDefined();
+  }
+  for (const [name, pose] of Object.entries(demo.poses)) {
+    const sk = buildSkeleton(pose, bendsFor(demo));
+    for (const p of Object.values(sk))
+      expect(Number.isFinite(p[0]) && Number.isFinite(p[1])).toBe(true);
+    const sh = shoulderOf(pose);
+    const arm = ARM * (pose.armScale ?? 1);
+    const reach = (t: typeof pose.handN | undefined, from: readonly [number, number]) =>
+      t === undefined ? 0 : dist(from, resolveTarget(t, pose.hip, sh));
+    expect(reach(pose.handN, sh), `${id}.${name} near hand`).toBeLessThan(arm + SLACK);
+    expect(reach(pose.handF, sh), `${id}.${name} far hand`).toBeLessThan(arm + SLACK);
+    expect(reach(pose.footN, pose.hip), `${id}.${name} near foot`).toBeLessThan(LEG + SLACK);
+    expect(reach(pose.footF, pose.hip), `${id}.${name} far foot`).toBeLessThan(LEG + SLACK);
+  }
+}
+
 describe('exercise demos', () => {
   it.each(programSeed.exercises.map((e) => [e.id]))('%s has a valid animation', (id) => {
-    const demo = DEMOS[id];
-    expect(demo).toBeDefined();
+    expect(DEMOS[id]).toBeDefined();
+    checkDemo(id, DEMOS[id], programTempo(id));
+  });
 
-    const steps = timelineFor(demo, programTempo(id));
-    expect(timelineLength(steps)).toBeGreaterThan(1);
-    for (const s of steps) {
-      expect(demo.poses[s.from]).toBeDefined();
-      expect(demo.poses[s.to]).toBeDefined();
-    }
+  it.each(programSeed.warmup.filter((w) => w.id !== 'wu_ramp').map((w) => [w.id]))(
+    'warm-up %s has a valid animation',
+    (id) => {
+      const list = WARMUP_DEMOS[id];
+      expect(list?.length).toBeGreaterThan(0);
+      list.forEach((d, i) => checkDemo(`${id}[${i}]`, d.demo, '2-0-1-0'));
+    },
+  );
 
-    for (const [name, pose] of Object.entries(demo.poses)) {
-      const sk = buildSkeleton(pose, bendsFor(demo));
-      for (const p of Object.values(sk))
-        expect(Number.isFinite(p[0]) && Number.isFinite(p[1])).toBe(true);
-      const sh = shoulderOf(pose);
-      const reach = (t: typeof pose.handN | undefined, from: readonly [number, number]) =>
-        t === undefined ? 0 : dist(from, resolveTarget(t, pose.hip, sh));
-      expect(reach(pose.handN, sh), `${id}.${name} near hand`).toBeLessThan(ARM + SLACK);
-      expect(reach(pose.handF, sh), `${id}.${name} far hand`).toBeLessThan(ARM + SLACK);
-      expect(reach(pose.footN, pose.hip), `${id}.${name} near foot`).toBeLessThan(LEG + SLACK);
-      expect(reach(pose.footF, pose.hip), `${id}.${name} far foot`).toBeLessThan(LEG + SLACK);
-    }
+  it('the ramp-up set reuses the first exercise of the day', () => {
+    // No dedicated drawing: the sheet shows today's first exercise instead.
+    expect(WARMUP_DEMOS.wu_ramp).toBeUndefined();
+    expect(demoSearchUrl("World's greatest stretch", 'warm up how to')).toContain(
+      encodeURIComponent('stretch warm up how to'),
+    );
   });
 
   it('uses the program tempo, with a 1.5-rep custom sequence for the goblet squat', () => {
