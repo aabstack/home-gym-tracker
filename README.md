@@ -1,8 +1,11 @@
-# Home Gym Tracker
+# Home Gym Tracker — Male version
 
 An offline-first **Progressive Web App** for logging a fixed 3-day full-body hypertrophy program (A → B → C) on a Samsung Galaxy S23. No backend and no accounts: all data stays in IndexedDB on the phone.
 
 **Live app:** https://aabstack.github.io/home-gym-tracker/ (source: https://github.com/aabstack/home-gym-tracker)
+
+> This is the **male version** (tag `male-v1.0.0`): a strength-hypertrophy program using the full dumbbell range.
+> The **lady version** is a separate app with its own program: https://github.com/aabstack/home-gym-tracker-lady
 
 ## Features
 
