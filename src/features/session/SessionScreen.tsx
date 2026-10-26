@@ -22,8 +22,9 @@ import { ExerciseGuideSheet } from '../exercise/ExerciseGuideSheet';
 import { ExerciseCard, type CardHandlers } from './ExerciseCard';
 import { ExerciseMenuSheet } from './ExerciseMenuSheet';
 import { RestTimerBar } from './RestTimerBar';
-import type { RowValues } from './SetRow';
-import { TechniqueSheet } from './TechniqueSheet';
+import { DEFAULT_RIR, type RowValues } from './SetRow';
+import { SetOptionsSheet } from './SetOptionsSheet';
+import { useI18n } from '../../i18n/i18n';
 
 const LETTERS = 'ABCDEFGH';
 
@@ -31,6 +32,8 @@ export function SessionScreen() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const ui = useUi();
+  const i18n = useI18n();
+  const { t } = i18n;
   const settings = useSettings();
   const exercises = useExercises();
   const session = useLiveQuery(async () => (await db.sessions.get(id)) ?? null, [id]);
@@ -50,7 +53,7 @@ export function SessionScreen() {
   }
 
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [techSlot, setTechSlot] = useState<Slot | null>(null);
+  const [optsSlot, setOptsSlot] = useState<Slot | null>(null);
   const [menuItem, setMenuItem] = useState<number | null>(null);
   const [guideItem, setGuideItem] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -152,7 +155,7 @@ export function SessionScreen() {
       addedKg: d.addedKg ?? base?.addedKg ?? 0,
       bandAssist: d.bandAssist ?? base?.bandAssist ?? false,
       reps: d.reps ?? (logged ? logged.reps : item.repMax),
-      rir: (d.rir ?? logged?.rir ?? 2) as Rir,
+      rir: (d.rir ?? logged?.rir ?? DEFAULT_RIR) as Rir,
       techniques: d.techniques ?? logged?.techniques ?? [],
       note: d.note ?? logged?.note ?? '',
     };
@@ -160,7 +163,10 @@ export function SessionScreen() {
 
   const slotLabel = (slot: Slot | undefined) => {
     if (!slot) return undefined;
-    return `${exerciseOf(slot.itemIndex).name} · Set ${slot.setIndex + 1}`;
+    return t('session.nextLabel', {
+      name: i18n.exName(exerciseOf(slot.itemIndex)),
+      n: slot.setIndex + 1,
+    });
   };
 
   const tick = async (itemIndex: number, setIndex: number) => {
@@ -169,7 +175,7 @@ export function SessionScreen() {
     const key = draftKey(ex.id, setIndex);
     const v = rowValues(itemIndex, setIndex);
     if (ex.loadType === 'dumbbell' && v.weightKg === null) {
-      ui.snackbar({ message: 'Set a weight first (tap − / + or the number).' });
+      ui.snackbar({ message: t('session.setWeightFirst') });
       return;
     }
     const existing = logs.get(key);
@@ -230,8 +236,8 @@ export function SessionScreen() {
       );
     });
     ui.snackbar({
-      message: `Removed set ${setIndex + 1} of ${ex.name}`,
-      actionLabel: 'Undo',
+      message: t('session.removedSet', { n: setIndex + 1, name: i18n.exName(ex) }),
+      actionLabel: t('common.undo'),
       onAction: () =>
         void db.transaction('rw', db.sessions, db.setLogs, async () => {
           await updateItems(prevItems);
@@ -250,8 +256,8 @@ export function SessionScreen() {
       await updateItems(items.filter((_, i) => i !== itemIndex));
     });
     ui.snackbar({
-      message: `Removed ${ex.name}`,
-      actionLabel: 'Undo',
+      message: t('session.removedEx', { name: i18n.exName(ex) }),
+      actionLabel: t('common.undo'),
       onAction: () =>
         void db.transaction('rw', db.sessions, db.setLogs, async () => {
           await updateItems(prevItems);
@@ -265,9 +271,9 @@ export function SessionScreen() {
     const fromLogs = (logList ?? []).filter((l) => l.exerciseId === from.id);
     if (fromLogs.length > 0) {
       const ok = await ui.confirm({
-        title: `Swap to ${to.name}?`,
-        message: `${fromLogs.length} logged set${fromLogs.length > 1 ? 's' : ''} of ${from.name} will be removed.`,
-        confirmLabel: 'Swap',
+        title: t('session.swapTitle', { name: i18n.exName(to) }),
+        message: t('session.swapMsg', { name: i18n.exName(from) }),
+        confirmLabel: t('session.swap'),
         danger: true,
       });
       if (!ok) return;
@@ -308,7 +314,7 @@ export function SessionScreen() {
       }
     }
     ui.snackbar({
-      message: count ? `Applied to ${count} set${count > 1 ? 's' : ''}` : 'Already applied',
+      message: count ? t('session.applied') : t('session.alreadyApplied'),
     });
   };
 
@@ -337,9 +343,9 @@ export function SessionScreen() {
   const finish = async () => {
     if (unlogged > 0) {
       const ok = await ui.confirm({
-        title: `${unlogged} set${unlogged > 1 ? 's' : ''} not logged. Finish anyway?`,
-        confirmLabel: 'Finish workout',
-        cancelLabel: 'Keep going',
+        title: t('session.unlogged', { n: unlogged }),
+        confirmLabel: t('session.finish'),
+        cancelLabel: t('session.keepGoing'),
       });
       if (!ok) return;
     }
@@ -350,9 +356,9 @@ export function SessionScreen() {
   const discard = async () => {
     setMenuOpen(false);
     const ok = await ui.confirm({
-      title: 'Discard this workout?',
-      message: 'All sets logged in this session will be deleted.',
-      confirmLabel: 'Discard',
+      title: t('session.discardTitle'),
+      message: t('session.discardMsg'),
+      confirmLabel: t('session.discardOk'),
       danger: true,
     });
     if (!ok) return;
@@ -366,7 +372,7 @@ export function SessionScreen() {
     onTick: (i, s) => void tick(i, s),
     onEdit: startEdit,
     onCancelEdit: () => setEditingKey(null),
-    onTechniques: (i, s) => setTechSlot({ itemIndex: i, setIndex: s }),
+    onOptions: (i, s) => setOptsSlot({ itemIndex: i, setIndex: s }),
     onAddSet: (i) =>
       void updateItems(items.map((it, j) => (j === i ? { ...it, sets: it.sets + 1 } : it))),
     onRemoveSet: (i) => void removeSet(i),
@@ -375,8 +381,8 @@ export function SessionScreen() {
     onApplySuggestion: applySuggestion,
   };
 
-  const techValues = techSlot ? rowValues(techSlot.itemIndex, techSlot.setIndex) : null;
-  const techEx = techSlot ? exerciseOf(techSlot.itemIndex) : null;
+  const optsValues = optsSlot ? rowValues(optsSlot.itemIndex, optsSlot.setIndex) : null;
+  const optsEx = optsSlot ? exerciseOf(optsSlot.itemIndex) : null;
   const menuEx = menuItem !== null ? exerciseOf(menuItem) : null;
   const inSession = new Set(items.map((i) => i.exerciseId));
   const alternatives = menuEx
@@ -391,24 +397,24 @@ export function SessionScreen() {
           type="button"
           onClick={() => navigate('/')}
           className="flex h-12 w-12 items-center justify-center rounded-full text-muted"
-          aria-label="Back to Today (workout keeps running)"
+          aria-label={t('session.back')}
         >
           <Icon name="back" />
         </button>
         <DayBadge day={session.dayId} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">
-            Day {session.dayId} · Week {session.weekNumber}
+            {t('day.dayWeek', { d: session.dayId, w: session.weekNumber })}
           </div>
           <div className="num text-label text-muted">
-            {formatClock((now - session.startedAt) / 1000)} elapsed
+            {t('session.elapsed', { t: formatClock((now - session.startedAt) / 1000) })}
           </div>
         </div>
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           className="flex h-12 w-12 items-center justify-center rounded-full text-muted"
-          aria-label="Workout options"
+          aria-label={t('session.options')}
         >
           <Icon name="more" />
         </button>
@@ -416,7 +422,7 @@ export function SessionScreen() {
 
       {session.isDeload && (
         <div className="mx-3 mt-3 rounded-2xl border-2 border-warn px-4 py-2 text-label text-warn">
-          <strong>DELOAD WEEK</strong> · same weights, half the sets
+          {t('session.deload')}
         </div>
       )}
 
@@ -452,7 +458,7 @@ export function SessionScreen() {
               className="rounded-3xl border-2 border-dashed border-line p-1"
             >
               <p className="px-3 py-1 text-label font-semibold uppercase tracking-wide text-muted">
-                Superset · alternate A1, B1, A2, B2…
+                {t('session.superset')}
               </p>
               <div className="flex flex-col gap-2">{cards}</div>
             </div>
@@ -461,18 +467,19 @@ export function SessionScreen() {
 
         <section className="rounded-2xl bg-surface p-3">
           <label className="block">
-            <span className="text-label text-muted">Session notes</span>
+            <span className="text-label text-muted">{t('session.notes')}</span>
             <textarea
               defaultValue={session.notes ?? ''}
               onChange={(e) => void db.sessions.update(session.id, { notes: e.target.value })}
               rows={3}
               className="mt-1 w-full rounded-xl bg-raised p-3 outline-none"
-              placeholder="How did it feel?"
+              placeholder={t('session.notesPh')}
             />
           </label>
           <label className="mt-3 flex items-center justify-between gap-3">
             <span>
-              Bodyweight <span className="text-label text-muted">(optional, kg)</span>
+              {t('session.bodyweight')}{' '}
+              <span className="text-label text-muted">{t('session.bodyweightHint')}</span>
             </span>
             <input
               type="text"
@@ -485,14 +492,14 @@ export function SessionScreen() {
                     e.target.value.trim() && Number.isFinite(n) && n > 0 ? roundKg(n) : undefined,
                 });
               }}
-              className="num h-12 w-28 rounded-xl bg-raised px-3 text-right text-input outline-none"
+              className="num h-12 w-28 rounded-xl bg-raised px-3 text-end text-input outline-none"
               placeholder="—"
             />
           </label>
         </section>
 
         <Button variant="primary" block onClick={() => void finish()}>
-          Finish Workout
+          {t('session.finish')}
         </Button>
         <div className={rest ? 'h-36' : 'h-8'} />
       </div>
@@ -512,14 +519,19 @@ export function SessionScreen() {
         />
       )}
 
-      <TechniqueSheet
-        open={techSlot !== null}
-        title={techSlot && techEx ? `${techEx.name} · Set ${techSlot.setIndex + 1}` : ''}
-        techniques={techValues?.techniques ?? []}
-        note={techValues?.note ?? ''}
-        perSide={techEx?.perSide ?? false}
-        onChange={(patch) => techSlot && techEx && updateDraft(techEx.id, techSlot.setIndex, patch)}
-        onClose={() => setTechSlot(null)}
+      <SetOptionsSheet
+        open={optsSlot !== null}
+        title={
+          optsSlot && optsEx
+            ? t('opts.title', { name: i18n.exName(optsEx), n: optsSlot.setIndex + 1 })
+            : ''
+        }
+        rir={optsValues?.rir ?? DEFAULT_RIR}
+        techniques={optsValues?.techniques ?? []}
+        note={optsValues?.note ?? ''}
+        perSide={optsEx?.perSide ?? false}
+        onChange={(patch) => optsSlot && optsEx && updateDraft(optsEx.id, optsSlot.setIndex, patch)}
+        onClose={() => setOptsSlot(null)}
       />
 
       <ExerciseMenuSheet
@@ -541,7 +553,7 @@ export function SessionScreen() {
         onClose={() => setGuideItem(null)}
       />
 
-      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Workout">
+      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title={t('session.menu')}>
         <div className="flex flex-col gap-2">
           <button
             type="button"
@@ -549,16 +561,16 @@ export function SessionScreen() {
               setMenuOpen(false);
               void finish();
             }}
-            className="flex min-h-14 items-center gap-3 rounded-2xl bg-raised px-4 text-left"
+            className="flex min-h-14 items-center gap-3 rounded-2xl bg-raised px-4 text-start"
           >
-            <Icon name="check" /> Finish workout
+            <Icon name="check" /> {t('session.finish')}
           </button>
           <button
             type="button"
             onClick={() => void discard()}
-            className="flex min-h-14 items-center gap-3 rounded-2xl px-4 text-left text-danger"
+            className="flex min-h-14 items-center gap-3 rounded-2xl px-4 text-start text-danger"
           >
-            <Icon name="trash" /> Discard workout
+            <Icon name="trash" /> {t('session.discard')}
           </button>
         </div>
       </Sheet>

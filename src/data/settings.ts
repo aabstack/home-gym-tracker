@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './db';
 import { programSeed } from './seed';
+import type { Lang } from '../i18n/i18n';
 
 export interface AppSettings {
   dumbbellWeightsKg: number[];
@@ -14,6 +15,16 @@ export interface AppSettings {
   /** Sessions finished before this timestamp are ignored by the rotation. */
   rotationResetAt: number;
   notificationsAsked: boolean;
+  /** UI language; null follows the phone. */
+  language: Lang | null;
+  // Profile and daily targets, editable on the Body tab. Height and target start unset.
+  heightCm: number | null;
+  age: number;
+  targetWeightKg: number | null;
+  stepsMin: number;
+  stepsMax: number;
+  proteinMin: number;
+  proteinMax: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -25,6 +36,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   programStartDate: null,
   rotationResetAt: 0,
   notificationsAsked: false,
+  language: null,
+  heightCm: null,
+  age: 35,
+  targetWeightKg: null,
+  stepsMin: 8000,
+  stepsMax: 10000,
+  proteinMin: 130,
+  proteinMax: 160,
 };
 
 export async function loadSettings(): Promise<AppSettings> {

@@ -9,9 +9,12 @@ An offline-first **Progressive Web App** for logging a fixed 3-day full-body hyp
 
 ## Features
 
+- **English and Arabic.** Follows the phone language by default; change it in Settings → Language. Arabic uses a right-to-left layout
 - Today screen with the next workout in rotation, training week, deload banner, and a 40-hour rest warning
+- **Daily habits on Today:** steps and protein for the day against your goals, plus a 7-day average. A PWA can't read Samsung Health or Health Connect, so steps are typed in; an "Open Samsung Health" shortcut is there to look the number up
+- **Body tab:** profile (height, age, target weight and daily goals, all editable), InBody check-ins (weight, body fat %, skeletal muscle, fat mass, BMI, BMR, waist-hip ratio) and tape measurements (waist, hips, thigh), with change since the last check-in, progress to target, a trend chart and a reminder every 4 weeks. BMI is worked out from weight and height when left blank
 - Warm-up checklist with an optional 4-minute timer
-- Set-by-set logging with large steppers (weight snaps to your dumbbells), reps, RIR and technique tags. Each set autosaves the moment you tick it
+- **Simple set logging:** one line per set (Set · Weight · Reps · ✓) with large steppers (weight snaps to your dumbbells), prefilled from last time, so most sets are one tap. RIR, technique tags and notes sit behind the set number; tap a logged set to change it. Each set autosaves the moment you tick it
 - Prefill from last session, a "Last time" line, and progression suggestions (double progression plus the program's ladder)
 - Rest timer based on an end timestamp, so it survives screen-off and app restarts. Vibrates, beeps (optional) and sends a notification when the app is in the background
 - Supersets (Day C) alternate A1, B1, A2, B2…; swap exercises within the same movement pattern
